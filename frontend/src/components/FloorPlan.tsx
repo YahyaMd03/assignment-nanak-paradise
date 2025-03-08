@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Canvas, Rect, Textbox, Group, Line, IText, FabricObject } from "fabric";
+import { Canvas, Rect, Textbox, Group, Line, IText, FabricObject, ActiveSelection } from "fabric";
 
 interface Room {
+  id: string;
   name: string;
   width: number;
   height: number;
@@ -11,7 +12,8 @@ interface Room {
 }
 
 interface DoorWindow {
-  room: string;
+  id: string;
+  roomId: string;
   position: string;
   width: number;
 }
@@ -29,7 +31,7 @@ const FloorPlan: React.FC = () => {
   const canvasRef = useRef<Canvas | null>(null);
   const canvasEl = useRef<HTMLCanvasElement | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<Group | null>(null);
-  const _clipboard = useRef<FabricObject | null>(null); // Store copied object
+  const _clipboard = useRef<FabricObject | null>(null); 
 
   useEffect(() => {
     axios.get("http://localhost:5000/api/floorplan").then((response) => {
@@ -73,7 +75,7 @@ const FloorPlan: React.FC = () => {
         selectable: true,
       });
 
-      const text = new Textbox(`${room.name} \n${room.width}x${room.height}`, {
+      const text = new Textbox(room.name, {
         left: rect.left! + 10,
         top: rect.top! + 10,
         fontSize: 16,
@@ -85,16 +87,15 @@ const FloorPlan: React.FC = () => {
         top: rect.top,
         selectable: true,
         hasControls: true,
+        name: room.name, 
       });
 
       group.on("moving", () => {
         preventOverlap(group, roomGroups);
-        updateDimensions(group);
       });
 
       group.on("scaling", () => {
         preventOverlap(group, roomGroups);
-        updateDimensions(group);
       });
 
       group.on("selected", () => {
@@ -106,50 +107,159 @@ const FloorPlan: React.FC = () => {
     });
 
     data.doors.forEach((door) => {
-      const room = data.rooms.find((r) => r.name === door.room);
+      const room = data.rooms.find((r) => r.id === door.roomId);
       if (!room) return;
 
-      const doorX = room.x + room.width / 2 - door.width / 2;
-
-      const doorLine = new Line(
-        [
-          doorX * SCALE_FACTOR,
-          (room.y + room.height) * SCALE_FACTOR,
-          (doorX + door.width) * SCALE_FACTOR,
-          (room.y + room.height) * SCALE_FACTOR,
-        ],
-        {
-          stroke: "brown",
-          strokeWidth: 4,
-          selectable: true,
-          lockMovementY: true,
-        }
-      );
+      let doorLine;
+      switch (door.position) {
+        case "left":
+          doorLine = new Line(
+            [
+              room.x * SCALE_FACTOR,
+              (room.y + room.height / 2) * SCALE_FACTOR,
+              room.x * SCALE_FACTOR,
+              (room.y + room.height / 2 + door.width) * SCALE_FACTOR,
+            ],
+            {
+              stroke: "brown",
+              strokeWidth: 4,
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        case "right":
+          doorLine = new Line(
+            [
+              (room.x + room.width) * SCALE_FACTOR,
+              (room.y + room.height / 2) * SCALE_FACTOR,
+              (room.x + room.width) * SCALE_FACTOR,
+              (room.y + room.height / 2 + door.width) * SCALE_FACTOR,
+            ],
+            {
+              stroke: "brown",
+              strokeWidth: 4,
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        case "top":
+          doorLine = new Line(
+            [
+              (room.x + room.width / 2) * SCALE_FACTOR,
+              room.y * SCALE_FACTOR,
+              (room.x + room.width / 2 + door.width) * SCALE_FACTOR,
+              room.y * SCALE_FACTOR,
+            ],
+            {
+              stroke: "brown",
+              strokeWidth: 4,
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        case "bottom":
+          doorLine = new Line(
+            [
+              (room.x + room.width / 2) * SCALE_FACTOR,
+              (room.y + room.height) * SCALE_FACTOR,
+              (room.x + room.width / 2 + door.width) * SCALE_FACTOR,
+              (room.y + room.height) * SCALE_FACTOR,
+            ],
+            {
+              stroke: "brown",
+              strokeWidth: 4,
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        default:
+          return;
+      }
 
       canvas.add(doorLine);
     });
 
     data.windows.forEach((window) => {
-      const room = data.rooms.find((r) => r.name === window.room);
+      const room = data.rooms.find((r) => r.id === window.roomId);
       if (!room) return;
 
-      const windowX = room.x + room.width / 2 - window.width / 2;
-
-      const windowLine = new Line(
-        [
-          windowX * SCALE_FACTOR,
-          room.y * SCALE_FACTOR,
-          (windowX + window.width) * SCALE_FACTOR,
-          room.y * SCALE_FACTOR,
-        ],
-        {
-          stroke: "gray",
-          strokeWidth: 4,
-          strokeDashArray: [5, 5],
-          selectable: true,
-          lockMovementY: true,
-        }
-      );
+      let windowLine;
+      switch (window.position) {
+        case "left":
+          windowLine = new Line(
+            [
+              room.x * SCALE_FACTOR,
+              (room.y + room.height / 2) * SCALE_FACTOR,
+              room.x * SCALE_FACTOR,
+              (room.y + room.height / 2 + window.width) * SCALE_FACTOR,
+            ],
+            {
+              stroke: "gray",
+              strokeWidth: 4,
+              strokeDashArray: [5, 5],
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        case "right":
+          windowLine = new Line(
+            [
+              (room.x + room.width) * SCALE_FACTOR,
+              (room.y + room.height / 2) * SCALE_FACTOR,
+              (room.x + room.width) * SCALE_FACTOR,
+              (room.y + room.height / 2 + window.width) * SCALE_FACTOR,
+            ],
+            {
+              stroke: "gray",
+              strokeWidth: 4,
+              strokeDashArray: [5, 5],
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        case "top":
+          windowLine = new Line(
+            [
+              (room.x + room.width / 2) * SCALE_FACTOR,
+              room.y * SCALE_FACTOR,
+              (room.x + room.width / 2 + window.width) * SCALE_FACTOR,
+              room.y * SCALE_FACTOR,
+            ],
+            {
+              stroke: "gray",
+              strokeWidth: 4,
+              strokeDashArray: [5, 5],
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        case "bottom":
+          windowLine = new Line(
+            [
+              (room.x + room.width / 2) * SCALE_FACTOR,
+              (room.y + room.height) * SCALE_FACTOR,
+              (room.x + room.width / 2 + window.width) * SCALE_FACTOR,
+              (room.y + room.height) * SCALE_FACTOR,
+            ],
+            {
+              stroke: "gray",
+              strokeWidth: 4,
+              strokeDashArray: [5, 5],
+              selectable: true,
+              lockMovementY: true,
+            }
+          );
+          break;
+        default:
+          return;
+      }
 
       canvas.add(windowLine);
     });
@@ -172,27 +282,19 @@ const FloorPlan: React.FC = () => {
     });
   };
 
-  const updateDimensions = (group: any) => {
-    const rect = group.getObjects()[0] as Rect;
-    const text = group.getObjects()[1] as Textbox;
-    text.set({
-      text: `${group.name} \n${Math.round(rect.width! / SCALE_FACTOR)}x${Math.round(
-        rect.height! / SCALE_FACTOR
-      )}`,
-    });
-    canvasRef.current?.renderAll();
-  };
-
   const addRoom = () => {
-    if (!floorPlan || !canvasRef.current || !selectedRoom) return;
+    if (!floorPlan || !canvasRef.current) return;
 
-    const selectedRect = selectedRoom.getObjects()[0] as Rect;
+    const canvasWidth = canvasRef.current.getWidth();
+    const canvasHeight = canvasRef.current.getHeight();
+
     const newRoom: Room = {
+      id: `room-${Date.now()}`, 
       name: `Room ${floorPlan.rooms.length + 1}`,
-      width: selectedRect.width! / SCALE_FACTOR,
-      height: selectedRect.height! / SCALE_FACTOR,
-      x: selectedRect.left! / SCALE_FACTOR + 20,
-      y: selectedRect.top! / SCALE_FACTOR + 20,
+      width: 100,
+      height: 100,
+      x: (canvasWidth / 2 - 50) / SCALE_FACTOR,
+      y: (canvasHeight / 2 - 50) / SCALE_FACTOR,
     };
 
     const newFloorPlan = { ...floorPlan, rooms: [...floorPlan.rooms, newRoom] };
@@ -222,44 +324,68 @@ const FloorPlan: React.FC = () => {
     canvasRef.current.discardActiveObject().renderAll();
   };
 
+  const ungroupRooms = () => {
+    if (!canvasRef.current) return;
+
+    const activeObject = canvasRef.current.getActiveObject();
+    if (activeObject && activeObject instanceof Group) {
+      const objects = activeObject.getObjects();
+      activeObject.destroy(); 
+      canvasRef.current.discardActiveObject();
+      canvasRef.current.add(...objects); 
+      canvasRef.current.renderAll();
+    }
+  };
+
   const copyObject = () => {
     if (!canvasRef.current) return;
     const activeObject = canvasRef.current.getActiveObject();
     if (activeObject) {
-      activeObject.clone()
-      .then((cloned) => {
-        _clipboard = cloned;
+      activeObject.clone((cloned) => {
+        if (cloned instanceof Group) {
+          const clonedObjects = cloned.getObjects().map((obj) => obj.clone());
+          const clonedGroup = new Group(clonedObjects, {
+            left: cloned.left,
+            top: cloned.top,
+            angle: cloned.angle,
+            scaleX: cloned.scaleX,
+            scaleY: cloned.scaleY,
+          });
+          _clipboard.current = clonedGroup;
+        } else {
+          _clipboard.current = cloned;
+        }
       });
     }
   };
-
-  const pasteObject = async () => {
+  const pasteObject = () => {
     if (!canvasRef.current || !_clipboard.current) return;
 
-    const clonedObj = await _clipboard.current.clone();
-    canvasRef.current.discardActiveObject();
-    clonedObj.set({
-      left: clonedObj.left! + 10,
-      top: clonedObj.top! + 10,
-      evented: true,
+    _clipboard.current.clone((clonedObj) => {
+      if (clonedObj instanceof Group) {
+        const clonedObjects = clonedObj.getObjects().map((obj) => obj.clone());
+        const clonedGroup = new Group(clonedObjects, {
+          left: clonedObj.left + 20,
+          top: clonedObj.top + 20,
+          angle: clonedObj.angle,
+          scaleX: clonedObj.scaleX,
+          scaleY: clonedObj.scaleY,
+        });
+        canvasRef.current.add(clonedGroup);
+        canvasRef.current.setActiveObject(clonedGroup);
+      } else {
+        clonedObj.set({
+          left: clonedObj.left + 20,
+          top: clonedObj.top + 20,
+          evented: true,
+        });
+        canvasRef.current.add(clonedObj);
+        canvasRef.current.setActiveObject(clonedObj);
+      }
+
+      canvasRef.current.requestRenderAll();
     });
-
-    if (clonedObj instanceof fabric.ActiveSelection) {
-      clonedObj.canvas = canvasRef.current;
-      clonedObj.forEachObject((obj) => {
-        canvasRef.current!.add(obj);
-      });
-      clonedObj.setCoords();
-    } else {
-      canvasRef.current.add(clonedObj);
-    }
-
-    _clipboard.current.top += 10;
-    _clipboard.current.left += 10;
-    canvasRef.current.setActiveObject(clonedObj);
-    canvasRef.current.requestRenderAll();
   };
-
   return (
     <div className="w-full h-screen flex flex-col items-center">
       <h1 className="text-xl font-bold my-4">Floor Plan</h1>
@@ -281,6 +407,12 @@ const FloorPlan: React.FC = () => {
           className="bg-green-500 text-white px-4 py-2 rounded"
         >
           Group Rooms
+        </button>
+        <button
+          onClick={ungroupRooms}
+          className="bg-orange-500 text-white px-4 py-2 rounded"
+        >
+          Ungroup Rooms
         </button>
         <button
           onClick={copyObject}

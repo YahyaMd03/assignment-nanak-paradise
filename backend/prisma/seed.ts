@@ -3,29 +3,39 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Seed Rooms
-  const livingRoom = await prisma.room.create({
-    data: { name: "Living Room", width: 400, height: 300, x: 0, y: 0 },
+  const room1 = await prisma.room.create({
+    data: { name: "Room 1", width: 400, height: 300, x: 0, y: 0 },
   });
 
-  const bedroom = await prisma.room.create({
-    data: { name: "Bedroom", width: 300, height: 300, x: 400, y: 0 },
+  const room2 = await prisma.room.create({
+    data: { name: "Room 2", width: 350, height: 300, x: 400, y: 0 },
   });
 
-  // Seed Doors (Use `roomId` instead of `roomName`)
+  const room3 = await prisma.room.create({
+    data: { name: "Room 3", width: 400, height: 250, x: 0, y: 300 },
+  });
+
+  const room4 = await prisma.room.create({
+    data: { name: "Room 4", width: 350, height: 250, x: 400, y: 300 },
+  });
+
   await prisma.door.createMany({
     data: [
-      { roomId: livingRoom.id, position: "center", width: 50 },
-      { roomId: bedroom.id, position: "right", width: 50 },
+      { roomId: room1.id, position: "right", width: 50 }, // Between Room 1 & 2
+      { roomId: room2.id, position: "left", width: 50 }, // Between Room 2 & 1
+      { roomId: room3.id, position: "right", width: 50 }, // Between Room 3 & 4
+      { roomId: room4.id, position: "left", width: 50 }, // Between Room 4 & 3
     ],
   });
 
-  // Seed Windows (if applicable)
   await prisma.window.createMany({
-    data: [{ roomId: bedroom.id, position: "left", width: 80 }],
+    data: [
+      { roomId: room1.id, position: "top", width: 80 },
+      { roomId: room2.id, position: "top", width: 80 },
+      { roomId: room3.id, position: "bottom", width: 80 },
+      { roomId: room4.id, position: "bottom", width: 80 },
+    ],
   });
-
-  console.log("Database seeded successfully!");
 }
 
 main()

@@ -37,7 +37,7 @@ project-root/
    ```
 4. Start the server:
    ```sh
-   npm start
+   npm run start
    ```
 4. The API server will run at **http://localhost:5000**
 
@@ -63,30 +63,27 @@ project-root/
    ```sh
    npm run dev
    ```
-4. Open **http://localhost:5173** in your browser (default Vite port)
+4. Open **http://localhost:5173** in your browser 
 
 ---
 
-## Environment Variables (Optional)
-If required, create a `.env` file in the `backend` or `frontend` directory to store configurations.
+## Environment Variables 
+Create a `.env` file in the `backend` directory to store configurations.
 
-Example `.env` for backend:
 ```
 PORT=5000
 ```
-
-Example `.env` for frontend:
 ```
-VITE_API_URL=http://localhost:5000
+DATABASE_URL="your-postgres-database-url"
 ```
-
+If you are using a different relational database, update the provider field in schema.prisma to match your database.
 ---
 
 ## Notes
 - The backend serves data for the floor plan.
 - The frontend fetches data from the backend and renders it using Fabric.js.
 - Ensure both backend and frontend are running simultaneously for proper functionality.
-
+- Database seeding is required before running the backend.
 ---
 
 
